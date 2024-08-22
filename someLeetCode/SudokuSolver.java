@@ -1,39 +1,88 @@
-package someLeetCode;
+import random
+import time
+from typing import List
 
-import java.util.HashSet;
+from pure_py.Sudoku import sudoku_funcs
 
-public class SudokuSolver {
 
-    public static void solveSudoku(char[][] board) {
-        HashSet[] rows = new HashSet[9];
-        HashSet[] columns = new HashSet[9];
+class SudokuSolver:
+    class TerminateRecursion(Exception):
+        pass
 
-        for (int i = 0; i < 9; i++) {
-            rows[i] = new HashSet<Integer>();
-            for (int j = 0; j < 9; j++) {
-                if (board[i][j] != '.') rows[i].add(board[i][j]);
-            }
-        }
-        for (int i = 0; i < 9; i++) {
-            columns[i] = new HashSet<Integer>();
-            for (int j = 0; j < 9; j++) {
-                if (board[j][i] != '.') columns[i].add(board[j][i]);
-            }
-        }
+    class UnsolvableSudoku(Exception):
+        pass
 
-        backtrack(board, rows, columns, 0, 0);
-    }
+    @staticmethod
+    def valid(board: List[List[int]]) -> bool:
+        for row in board:
+            check = set()
+            for x in row:
+                if x == 0:
+                    continue
+                if x in check or x > 9 or x < 0:
+                    return False
+                check.add(x)
 
-    private static void backtrack(char[][] board, HashSet[] rows, HashSet[] columns, int y, int x) {
+        for x in range(9):
+            check = set()
+            for row in board:
+                if row[x] == 0:
+                    continue
+                if row[x] in check or x > 9 or x < 0:
+                    return False
+                check.add(row[x])
 
-        for (int i = y; i < 9; i++) {
-            for (int j = x; j < 9; j++) {
+        sub_boxes = zip((0, 0, 0, 3, 3, 3, 6, 6, 6), (0, 3, 6, 0, 3, 6, 0, 3, 6))
+        for y, x in sub_boxes:
+            check = set()
+            for addY in range(3):
+                for addX in range(3):
+                    if board[y + addY][x + addX] == 0:
+                        continue
+                    if board[y + addY][x + addX] in check or x > 9 or x < 0:
+                        return False
+                    check.add(board[y + addY][x + addX])
+        return True
 
-            }
-        }
-    }
+    @staticmethod
+    def possible(y, x, n: int, board: List[List[int]]) -> bool:
+        for i in range(9):
+            if board[y][i] == n:
+                return False
+        for j in range(9):
+            if board[j][x] == n:
+                return False
 
-    public static void main(String[] args) {
-        solveSudoku(new char[][]{{1,2}, {1,2}});
-    }
-}
+        x0 = (x // 3) * 3
+        y0 = (y // 3) * 3
+        for i in range(3):
+            for j in range(3):
+                if board[y0 + i][x0 + j] == n:
+                    return False
+        return True
+
+    @staticmethod
+    def full(board: List[List[int]]) -> bool:
+        for y in range(9):
+            for x in range(9):
+                if board[y][x] == 0:
+                    return False
+        return True
+
+    @staticmethod
+    def solver(board: List[List[int]]) -> None:
+        if time.time() - sudoku_funcs.t0 > 1:
+            raise SudokuSolver.UnsolvableSudoku
+        if SudokuSolver.full(board):
+            raise SudokuSolver.TerminateRecursion
+        for y in range(9):
+            for x in range(9):
+                if board[y][x] == 0:
+                    iterator = list(range(1, 10))
+                    random.Random().shuffle(iterator)
+                    for n in iterator:
+                        if SudokuSolver.possible(y, x, n, board):
+                            board[y][x] = n
+                            SudokuSolver.solver(board)
+                            board[y][x] = 0
+                    return
